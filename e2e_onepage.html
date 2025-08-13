@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AUTOSAR E2E 计算工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        neutral: '#F5F7FA',
+                        dark: '#1D2129',
+                        light: '#FFFFFF',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        danger: '#FF4D4F'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .input-focus {
+                @apply focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-dark">
+    <!-- 页面头部 -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary">
+                <i class="fa fa-shield mr-2"></i>AUTOSAR E2E 计算工具
+            </h1>
+            <!-- <p class="text-gray-600 mt-2">交互式工具帮助理解E2E通信保护机制的计算原理</p> -->
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 简介部分 -->
+        <section class="mb-10 bg-white rounded-lg p-6 card-shadow">
+            <h2 class="text-xl font-semibold text-dark mb-3">什么是AUTOSAR E2E？</h2>
+            <p class="text-gray-700 mb-4">
+                AUTOSAR E2E（End-to-End）是一种通信保护机制，用于确保ECU之间数据传输的完整性和正确性。
+                它通过CRC校验、计数器和状态检查等方式，检测数据传输过程中可能出现的错误。
+            </p>
+            <p class="text-gray-700">
+                本工具基于<a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-primary underline">相关技术文章</a>的计算逻辑，
+                允许您输入参数并实时查看E2E校验结果及计算过程。
+            </p>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- 输入参数区域 -->
+            <section class="lg:col-span-1">
+                <div class="bg-white rounded-lg p-6 card-shadow h-full">
+                    <h2 class="text-xl font-semibold text-dark mb-5 flex items-center">
+                        <i class="fa fa-sliders mr-2 text-primary"></i>输入参数
+                    </h2>
+                    
+                    <form id="e2eForm" class="space-y-5">
+                        <!-- 基本配置 -->
+                        <div>
+                            <h3 class="font-medium text-gray-800 mb-3">基本配置</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="e2eVersion" class="block text-sm font-medium text-gray-700 mb-1">E2E协议版本</label>
+                                    <select id="e2eVersion" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                        <option value="v1">E2E v1</option>
+                                        <option value="v2" selected>E2E v2</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label for="profile" class="block text-sm font-medium text-gray-700 mb-1">保护级别 (Profile)</label>
+                                    <select id="profile" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                        <option value="1" selected>E2E_P01</option>
+                                        <option value="2">E2E_P02</option>
+                                        <option value="3">E2E_P03</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- CRC配置 -->
+                        <div>
+                            <h3 class="font-medium text-gray-800 mb-3">CRC配置</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="crcPolynomial" class="block text-sm font-medium text-gray-700 mb-1">CRC多项式</label>
+                                    <select id="crcPolynomial" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                        <option value="crc8" selected>CRC8 (0x1D)</option>
+                                        <option value="crc16">CRC16 (0x1021)</option>
+                                        <option value="crc32">CRC32 (0x04C11DB7)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="button" id="calculateBtn" 
+                            class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center justify-center">
+                            <i class="fa fa-calculator mr-2"></i>计算E2E结果
+                        </button>
+                    </form>
+                </div>
+            </section>
+            
+            <!-- 数据参数区域 -->
+            <section class="lg:col-span-1">
+                <div class="bg-white rounded-lg p-6 card-shadow h-full">
+                    <h2 class="text-xl font-semibold text-dark mb-5 flex items-center">
+                        <i class="fa fa-database mr-2 text-primary"></i>数据参数
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div>
+                            <label for="dataLength" class="block text-sm font-medium text-gray-700 mb-1">数据长度 (字节)</label>
+                            <input type="number" id="dataLength" min="1" max="1024" value="8" readonly
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600 cursor-not-allowed">
+                            <p class="text-xs text-gray-500 mt-1">自动计算：DataID(2) + Counter(1) + 数据内容字节数</p>
+                        </div>
+                        
+                        <div>
+                            <label for="dataID" class="block text-sm font-medium text-gray-700 mb-1">DataID (十六进制)</label>
+                            <input type="text" id="dataID" value="0009" maxlength="4"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                            <p class="text-xs text-gray-500 mt-1">16位DataID，例如: 1122</p>
+                        </div>
+                        
+                        <div>
+                            <label for="counter" class="block text-sm font-medium text-gray-700 mb-1">计数器值</label>
+                            <input type="number" id="counter" min="0" max="255" value="0" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                            <p class="text-xs text-gray-500 mt-1">用于检测重复或顺序错误的计数器</p>
+                        </div>
+                        
+                        <div>
+                            <label for="dataValue" class="block text-sm font-medium text-gray-700 mb-1">数据内容 (十六进制)</label>
+                            <input type="text" id="dataValue" value="5711" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                            <p class="text-xs text-gray-500 mt-1">实际数据内容，例如: 5711</p>
+                        </div>
+                        
+                        <!-- 数据布局展示区域 -->
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">数据布局展示</label>
+                            <div id="dataLayoutDisplay" class="border border-gray-200 rounded-md p-3 bg-gray-50">
+                                <div class="text-xs text-gray-500 mb-2">字节解析 (十六进制)</div>
+                                <div id="dataByteDisplay" class="grid grid-cols-4 gap-1 mb-3">
+                                    <div class="text-center text-xs text-gray-400">等待输入...</div>
+                                </div>
+                                <div class="text-xs text-gray-500 mb-1">字节说明</div>
+                                <div id="dataDescriptionDisplay" class="space-y-1 text-xs">
+                                    <div class="text-gray-400">请输入数据内容以查看解析</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 结果展示区域 -->
+            <section class="lg:col-span-2">
+                <!-- 计算结果 -->
+                <div class="bg-white rounded-lg p-6 card-shadow mb-8">
+                    <h2 class="text-xl font-semibold text-dark mb-5 flex items-center">
+                        <i class="fa fa-bar-chart mr-2 text-primary"></i>E2E计算结果
+                    </h2>
+                    
+                    <div id="resultContainer" class="opacity-50">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h3 class="font-medium text-gray-800 mb-3">校验结果</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <p class="text-sm text-gray-600">CRC值</p>
+                                        <p id="crcResult" class="text-xl font-mono font-semibold">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">计数器校验</p>
+                                        <p id="counterResult" class="text-xl font-semibold">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">最终保护数据</p>
+                                        <p id="protectedData" class="text-sm font-mono bg-gray-50 p-2 rounded break-all">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="border border-gray-200 rounded-lg p-4">
+                                <h3 class="font-medium text-gray-800 mb-3">状态信息</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <p class="text-sm text-gray-600">完整性检查</p>
+                                        <p id="integrityCheck" class="text-xl font-semibold">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">错误检测</p>
+                                        <p id="errorDetection" class="text-xl font-semibold">--</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">计算时间</p>
+                                        <p id="calculationTime" class="text-xl font-semibold">--</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 计算过程 -->
+                <div class="bg-white rounded-lg p-6 card-shadow">
+                    <h2 class="text-xl font-semibold text-dark mb-5 flex items-center">
+                        <i class="fa fa-list-ol mr-2 text-primary"></i>计算过程解析
+                    </h2>
+                    
+                    <div id="processContainer" class="space-y-4">
+                        <div class="p-4 bg-gray-50 rounded-md border border-gray-200">
+                            <p class="text-gray-500 italic text-center">请输入参数并点击"计算E2E结果"按钮查看详细计算过程</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-dark text-white mt-12">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0">
+                    <p class="text-gray-400">© 2023 AUTOSAR E2E 计算工具</p>
+                    <p class="text-gray-500 text-sm mt-1">用于学习和理解AUTOSAR E2E机制</p>
+                </div>
+                <div>
+                    <a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-gray-400 hover:text-white transition-colors">
+                        <i class="fa fa-external-link mr-1"></i>参考技术文章
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // CRC计算函数 - 支持CRC8, CRC16, CRC32
+        class CRC {
+            static crc8(data) {
+                const polynomial = 0x1D;
+                let crc = 0x00;
+                
+                for (let byte of data) {
+                    crc ^= byte;
+                    for (let i = 0; i < 8; i++) {
+                        if (crc & 0x80) {
+                            crc = (crc << 1) ^ polynomial;
+                        } else {
+                            crc <<= 1;
+                        }
+                        crc ^= 0x00;
+                    }
+                }
+                
+                return crc;
+            }
+            
+            static crc16(data) {
+                const polynomial = 0x1021;
+                let crc = 0xFFFF;
+                
+                for (let byte of data) {
+                    crc ^= (byte << 8);
+                    for (let i = 0; i < 8; i++) {
+                        if (crc & 0x8000) {
+                            crc = (crc << 1) ^ polynomial;
+                        } else {
+                            crc <<= 1;
+                        }
+                        crc &= 0xFFFF;
+                    }
+                }
+                
+                return crc;
+            }
+            
+            static crc32(data) {
+                const polynomial = 0x04C11DB7;
+                let crc = 0xFFFFFFFF;
+                
+                for (let byte of data) {
+                    crc ^= (byte << 24);
+                    for (let i = 0; i < 8; i++) {
+                        if (crc & 0x80000000) {
+                            crc = (crc << 1) ^ polynomial;
+                        } else {
+                            crc <<= 1;
+                        }
+                        crc &= 0xFFFFFFFF;
+                    }
+                }
+                
+                return ~crc & 0xFFFFFFFF;
+            }
+        }
+
+        // 十六进制字符串转字节数组
+        function hexToBytes(hex) {
+            if (hex.length % 2 !== 0) {
+                hex = '0' + hex; // 补零
+            }
+            
+            const bytes = [];
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes.push(parseInt(hex.substr(i, 2), 16));
+            }
+            return bytes;
+        }
+
+        // 字节数组转十六进制字符串
+        function bytesToHex(bytes) {
+            return bytes.map(byte => {
+                return ('0' + (byte & 0xFF).toString(16)).slice(-2).toUpperCase();
+            }).join('');
+        }
+
+        // 自动计算数据长度
+        function calculateDataLength() {
+            const dataID = document.getElementById('dataID').value.trim();
+            const counter = document.getElementById('counter').value;
+            const dataValue = document.getElementById('dataValue').value.trim();
+            
+            // DataID固定2字节，Counter固定1字节
+            let totalLength = 2 + 1;
+            
+            // 计算数据内容字节数
+            if (dataValue) {
+                const dataBytes = hexToBytes(dataValue);
+                totalLength += dataBytes.length;
+            }
+            
+            document.getElementById('dataLength').value = totalLength;
+            return totalLength;
+        }
+
+        // 更新数据布局展示
+        function updateDataLayoutDisplay() {
+            const dataID = document.getElementById('dataID').value.trim();
+            const counter = parseInt(document.getElementById('counter').value) || 0;
+            const dataValue = document.getElementById('dataValue').value.trim();
+            const dataByteDisplay = document.getElementById('dataByteDisplay');
+            const dataDescriptionDisplay = document.getElementById('dataDescriptionDisplay');
+            
+            // 构建完整的数据结构：DataID(2字节) + Counter(1字节) + 数据内容
+            let allBytes = [];
+            let descriptions = [];
+            
+            // DataID - 2字节 (低字节在前，高字节在后)
+            if (dataID && dataID.length >= 1) {
+                const dataIDBytes = hexToBytes(dataID.padStart(4, '0')); // 确保4位16进制
+                if (dataIDBytes.length >= 2) {
+                    allBytes.push(dataIDBytes[1]); // DataID低字节
+                    allBytes.push(dataIDBytes[0]); // DataID高字节
+                } else if (dataIDBytes.length === 1) {
+                    allBytes.push(dataIDBytes[0]); // DataID低字节
+                    allBytes.push(0x00); // DataID高字节补0
+                }
+            } else {
+                allBytes.push(0x00, 0x00); // 默认DataID
+            }
+            
+            // Counter - 1字节
+            allBytes.push(counter & 0xFF);
+            
+            // 数据内容
+            if (dataValue) {
+                const dataBytes = hexToBytes(dataValue);
+                allBytes.push(...dataBytes);
+            }
+            
+            if (allBytes.length === 0) {
+                dataByteDisplay.innerHTML = '<div class="text-center text-xs text-gray-400 col-span-4">等待输入...</div>';
+                dataDescriptionDisplay.innerHTML = '<div class="text-gray-400">请输入数据内容以查看解析</div>';
+                return;
+            }
+            
+            // 显示字节数据
+            let byteHtml = '';
+            allBytes.forEach((byte, index) => {
+                const hexStr = ('0' + byte.toString(16)).slice(-2).toUpperCase();
+                byteHtml += `<div class="text-center p-1 bg-white border border-gray-300 rounded text-xs font-mono">
+                    <div class="text-gray-500">Data[${index}]</div>
+                    <div class="font-semibold">0x${hexStr}</div>
+                </div>`;
+            });
+            dataByteDisplay.innerHTML = byteHtml;
+            
+            // 生成字节说明
+            let descriptionHtml = '';
+            allBytes.forEach((byte, index) => {
+                const hexStr = ('0' + byte.toString(16)).slice(-2).toUpperCase();
+                let description = '';
+                
+                if (index === 0) {
+                    description = `Data[0]: DataID低8位 = 0x${hexStr} (${byte})`;
+                } else if (index === 1) {
+                    description = `Data[1]: DataID高8位 = 0x${hexStr} (${byte})`;
+                } else if (index === 2) {
+                    description = `Data[2]: Counter = 0x${hexStr} (${byte})`;
+                } else if (index >= 3) {
+                    description = `Data[${index}]: 保护信号第${index - 2}字节 = 0x${hexStr} (${byte})`;
+                }
+                
+                descriptionHtml += `<div class="text-gray-700 p-1 bg-white rounded border border-gray-200">${description}</div>`;
+            });
+            
+            // 添加DataID组合信息
+            if (allBytes.length >= 2) {
+                const dataIdValue = (allBytes[1] << 8) | allBytes[0]; // 高8位 << 8 + 低8位
+                descriptionHtml = `<div class="text-primary font-semibold p-2 bg-primary/5 rounded border border-primary/20">
+                    <i class="fa fa-info-circle mr-1"></i>DataID组合: 0x${dataIdValue.toString(16).toUpperCase().padStart(4, '0')} (${dataIdValue})
+                </div>` + descriptionHtml;
+            }
+            
+            dataDescriptionDisplay.innerHTML = descriptionHtml;
+            
+            // 自动计算数据长度
+            calculateDataLength();
+        }
+
+        // 计算E2E结果
+        function calculateE2E() {
+            const startTime = performance.now();
+            
+            // 获取输入参数
+            const e2eVersion = document.getElementById('e2eVersion').value;
+            const profile = parseInt(document.getElementById('profile').value);
+            const dataLength = parseInt(document.getElementById('dataLength').value);
+            const dataID = document.getElementById('dataID').value.trim();
+            const counter = parseInt(document.getElementById('counter').value) || 0;
+            const dataValue = document.getElementById('dataValue').value.trim();
+            const crcType = document.getElementById('crcPolynomial').value;
+            
+            // 构建完整的Data数组：DataID(2字节) + Counter(1字节) + 数据内容
+            let allDataBytes = [];
+            
+            // DataID - 2字节 (低字节在前，高字节在后)
+            if (dataID && dataID.length >= 1) {
+                const dataIDBytes = hexToBytes(dataID.padStart(4, '0'));
+                if (dataIDBytes.length >= 2) {
+                    allDataBytes.push(dataIDBytes[1]); // DataID低字节
+                    allDataBytes.push(dataIDBytes[0]); // DataID高字节
+                } else if (dataIDBytes.length === 1) {
+                    allDataBytes.push(dataIDBytes[0]); // DataID低字节
+                    allDataBytes.push(0x00); // DataID高字节补0
+                }
+            } else {
+                allDataBytes.push(0x00, 0x00); // 默认DataID
+            }
+            
+            // Counter - 1字节
+            allDataBytes.push(counter & 0xFF);
+            
+            // 数据内容
+            if (dataValue) {
+                const dataContentBytes = hexToBytes(dataValue);
+                allDataBytes.push(...dataContentBytes);
+            }
+            
+            // 清空之前的过程解析
+            document.getElementById('processContainer').innerHTML = '';
+            
+            // 添加过程步骤
+            function addProcessStep(title, content, isImportant = false) {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = `border-l-4 ${isImportant ? 'border-primary' : 'border-gray-300'} pl-4 py-1 mb-2`;
+                
+                const titleEl = document.createElement('h3');
+                titleEl.className = `font-medium ${isImportant ? 'text-primary' : 'text-gray-800'}`;
+                titleEl.textContent = title;
+                
+                const contentEl = document.createElement('p');
+                contentEl.className = 'text-gray-700 mt-1';
+                contentEl.innerHTML = content;
+                
+                stepDiv.appendChild(titleEl);
+                stepDiv.appendChild(contentEl);
+                document.getElementById('processContainer').appendChild(stepDiv);
+            }
+            
+            // 步骤1: 验证输入数据
+            addProcessStep('步骤1: 验证输入数据', 
+                `E2E版本: ${e2eVersion}<br>
+                保护级别: E2E_P${profile}<br>
+                DataID: 0x${dataID} (${parseInt(dataID, 16) || 0})<br>
+                Counter: ${counter}<br>
+                数据内容: ${dataValue ? '0x' + dataValue : '无'}<br>
+                构建的Data数组长度: ${allDataBytes.length} 字节<br>
+                CRC类型: ${crcType.toUpperCase()}`);
+            
+            // 验证数据长度
+            if (allDataBytes.length !== dataLength) {
+                addProcessStep('输入错误', `数据长度不匹配: 构建了 ${allDataBytes.length} 字节，但计算长度为 ${dataLength} 字节`, true);
+                return;
+            }
+            
+            // 步骤2: 显示完整的Data数组结构
+            const dataHexStr = bytesToHex(allDataBytes);
+            addProcessStep('步骤2: 构建完整Data数组', 
+                `DataID低字节: 0x${('0' + allDataBytes[0].toString(16)).slice(-2).toUpperCase()}<br>
+                DataID高字节: 0x${('0' + allDataBytes[1].toString(16)).slice(-2).toUpperCase()}<br>
+                Counter字节: 0x${('0' + allDataBytes[2].toString(16)).slice(-2).toUpperCase()}<br>
+                数据内容: ${dataValue ? dataValue.match(/.{2}/g).map(b => '0x' + b).join(', ') : '无'}<br>
+                完整Data数组: [${allDataBytes.join(', ')}]<br>
+                十六进制表示: 0x${dataHexStr}`);
+            
+            // 步骤3: 计算CRC (基于完整Data数组)
+            let crcValue;
+            switch (crcType) {
+                case 'crc8':
+                    crcValue = CRC.crc8(allDataBytes);
+                    break;
+                case 'crc16':
+                    crcValue = CRC.crc16(allDataBytes);
+                    break;
+                case 'crc32':
+                    crcValue = CRC.crc32(allDataBytes);
+                    break;
+            }
+            
+            // 格式化CRC结果
+            let crcHex;
+            if (crcType === 'crc8') {
+                crcHex = ('0' + crcValue.toString(16)).slice(-2).toUpperCase();
+            } else if (crcType === 'crc16') {
+                crcHex = ('000' + crcValue.toString(16)).slice(-4).toUpperCase();
+            } else {
+                crcHex = ('0000000' + crcValue.toString(16)).slice(-8).toUpperCase();
+            }
+            
+            addProcessStep('步骤3: 计算CRC', 
+                `${crcType.toUpperCase()} 多项式计算过程:<br>
+                输入Data数组: [${allDataBytes.join(', ')}]<br>
+                计算结果: ${crcValue} (0x${crcHex})`);
+            
+            // 步骤4: 生成最终保护数据 (Data数组 + CRC)
+            let finalBytes = [...allDataBytes];
+            if (crcType === 'crc8') {
+                finalBytes.push(crcValue & 0xFF);
+            } else if (crcType === 'crc16') {
+                finalBytes.push((crcValue >> 8) & 0xFF);
+                finalBytes.push(crcValue & 0xFF);
+            } else {
+                finalBytes.push((crcValue >> 24) & 0xFF);
+                finalBytes.push((crcValue >> 16) & 0xFF);
+                finalBytes.push((crcValue >> 8) & 0xFF);
+                finalBytes.push(crcValue & 0xFF);
+            }
+            
+            const finalHex = bytesToHex(finalBytes);
+            addProcessStep('步骤4: 生成最终保护数据', 
+                `Data数组 + CRC 组合:<br>
+                字节数组: [${finalBytes.join(', ')}]<br>
+                十六进制表示: 0x${finalHex}`);
+            
+            // 步骤5: 验证结果
+            let integrityCheck = '<span class="text-success">通过</span>';
+            let errorDetection = '<span class="text-success">无错误</span>';
+            let counterCheck = `<span class="text-success">有效 (${counter})</span>`;
+            
+            // 简单的错误模拟检测
+            if (allDataBytes.length === 0) {
+                integrityCheck = '<span class="text-danger">失败</span>';
+                errorDetection = '<span class="text-danger">数据为空</span>';
+            } else if (counter < 0 || counter > 255) {
+                counterCheck = `<span class="text-danger">无效 (超出范围)</span>`;
+                errorDetection = '<span class="text-warning">计数器范围错误</span>';
+            }
+            
+            addProcessStep('步骤5: 验证结果', 
+                `完整性检查: ${integrityCheck}<br>
+                计数器校验: ${counterCheck}<br>
+                错误检测: ${errorDetection}`);
+            
+            // 计算耗时
+            const endTime = performance.now();
+            const timeTaken = (endTime - startTime).toFixed(2);
+            
+            // 更新结果展示
+            document.getElementById('crcResult').textContent = `0x${crcHex}`;
+            document.getElementById('counterResult').innerHTML = counterCheck;
+            document.getElementById('protectedData').textContent = `0x${finalHex}`;
+            document.getElementById('integrityCheck').innerHTML = integrityCheck;
+            document.getElementById('errorDetection').innerHTML = errorDetection;
+            document.getElementById('calculationTime').textContent = `${timeTaken} ms`;
+            
+            // 激活结果区域
+            document.getElementById('resultContainer').classList.remove('opacity-50');
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 绑定计算按钮事件
+            document.getElementById('calculateBtn').addEventListener('click', calculateE2E);
+            
+            // 添加输入验证和实时数据展示更新
+            document.getElementById('dataValue').addEventListener('input', function(e) {
+                // 只允许十六进制字符
+                this.value = this.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+                // 更新数据布局展示
+                updateDataLayoutDisplay();
+            });
+            
+            // 监听DataID输入变化
+            document.getElementById('dataID').addEventListener('input', function(e) {
+                // 只允许十六进制字符，最多4位
+                this.value = this.value.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+                if (this.value.length > 4) {
+                    this.value = this.value.substring(0, 4);
+                }
+                updateDataLayoutDisplay();
+            });
+            
+            // 监听Counter输入变化
+            document.getElementById('counter').addEventListener('input', function(e) {
+                updateDataLayoutDisplay();
+            });
+            
+            // 页面加载时初始化数据展示
+            updateDataLayoutDisplay();
+        });
+    </script>
+</body>
+</html>
