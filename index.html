@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AUTOSAR E2E 计算工具</title>
+    <title>AUTOSAR E2E Onepage</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -45,28 +45,28 @@
     <!-- 页面头部 -->
     <header class="bg-white shadow-sm">
         <div class="container mx-auto px-4 py-6">
-            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary">
-                <i class="fa fa-shield mr-2"></i>AUTOSAR E2E 计算工具
-            </h1>
-            <!-- <p class="text-gray-600 mt-2">交互式工具帮助理解E2E通信保护机制的计算原理</p> -->
+            <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
+                <div>
+                    <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary">
+                        <i class="fa fa-shield mr-2"></i>AUTOSAR E2E 计算工具
+                    </h1>
+                </div>
+                <div class="md:max-w-md">
+                    <p class="text-xs text-gray-600 mb-2 leading-relaxed">
+                        AUTOSAR E2E（End-to-End）是一种通信保护机制，用于确保ECU之间数据传输的完整性和正确性。
+                        它通过CRC校验、计数器和状态检查等方式，检测数据传输过程中可能出现的错误。
+                    </p>
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        本工具基于<a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-primary underline">相关技术文章</a>的计算逻辑，
+                        允许您输入参数并实时查看E2E校验结果及计算过程。
+                    </p>
+                </div>
+            </div>
         </div>
     </header>
 
     <!-- 主要内容区 -->
     <main class="container mx-auto px-4 py-8">
-        <!-- 简介部分 -->
-        <section class="mb-10 bg-white rounded-lg p-6 card-shadow">
-            <h2 class="text-xl font-semibold text-dark mb-3">什么是AUTOSAR E2E？</h2>
-            <p class="text-gray-700 mb-4">
-                AUTOSAR E2E（End-to-End）是一种通信保护机制，用于确保ECU之间数据传输的完整性和正确性。
-                它通过CRC校验、计数器和状态检查等方式，检测数据传输过程中可能出现的错误。
-            </p>
-            <p class="text-gray-700">
-                本工具基于<a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-primary underline">相关技术文章</a>的计算逻辑，
-                允许您输入参数并实时查看E2E校验结果及计算过程。
-            </p>
-        </section>
-
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <!-- 输入参数区域 -->
             <section class="lg:col-span-1">
