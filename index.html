@@ -44,21 +44,19 @@
 <body class="bg-gray-50 font-sans text-dark">
     <!-- 页面头部 -->
     <header class="bg-white shadow-sm">
-        <div class="container mx-auto px-4 py-6">
+        <div class="container mx-auto px-4 pt-6 pb-2">
             <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
                 <div>
                     <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-primary">
                         <i class="fa fa-shield mr-2"></i>AUTOSAR E2E 计算工具
                     </h1>
                 </div>
-                <div class="md:max-w-md">
+                <div class="md:max-w-lg">
                     <p class="text-xs text-gray-600 mb-2 leading-relaxed">
-                        AUTOSAR E2E（End-to-End）是一种通信保护机制，用于确保ECU之间数据传输的完整性和正确性。
-                        它通过CRC校验、计数器和状态检查等方式，检测数据传输过程中可能出现的错误。
+                        AUTOSAR E2E（End-to-End）是一种通信保护机制，用于确保ECU之间数据传输的完整性和正确性。它通过CRC校验、计数器和状态检查等方式，检测数据传输过程中可能出现的错误。
                     </p>
                     <p class="text-xs text-gray-600 leading-relaxed">
-                        本工具基于<a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-primary underline">相关技术文章</a>的计算逻辑，
-                        允许您输入参数并实时查看E2E校验结果及计算过程。
+                        本工具基于<a href="https://zhuanlan.zhihu.com/p/137042362" target="_blank" class="text-primary underline">相关技术文章</a>的计算逻辑，允许您输入参数并实时查看E2E校验结果及计算过程。
                     </p>
                 </div>
             </div>
@@ -113,6 +111,7 @@
                                         <option value="crc16">CRC16 (0x1021)</option>
                                         <option value="crc32">CRC32 (0x04C11DB7)</option>
                                     </select>
+                                    <p class="text-xs text-gray-500 mt-1">CRC8-Init-0x00</p>
                                 </div>
                             </div>
                         </div>
@@ -157,7 +156,7 @@
                         <div>
                             <label for="dataValue" class="block text-sm font-medium text-gray-700 mb-1">数据内容 (十六进制)</label>
                             <input type="text" id="dataValue" value="5711" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                class="w-full px-3 py-2 border border-warning rounded-md input-focus bg-warning/10 focus:border-warning focus:ring-warning">
                             <p class="text-xs text-gray-500 mt-1">实际数据内容，例如: 5711</p>
                         </div>
                         
@@ -186,7 +185,7 @@
                     <h2 class="text-xl font-semibold text-dark mb-5 flex items-center">
                         <i class="fa fa-bar-chart mr-2 text-primary"></i>E2E计算结果
                     </h2>
-                    
+
                     <div id="resultContainer" class="opacity-50">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div class="border border-gray-200 rounded-lg p-4">
