@@ -78,20 +78,21 @@
                     <form id="e2eForm" class="space-y-5">
                         <!-- 基本配置 -->
                         <div>
-                            <h3 class="font-medium text-gray-800 mb-3">基本配置</h3>
+                            <!-- <h3 class="font-medium text-gray-800 mb-3">基本配置</h3> -->
                             
                             <div class="space-y-4">
-                                <div>
+                                <!-- <div>
                                     <label for="e2eVersion" class="block text-sm font-medium text-gray-700 mb-1">E2E协议版本</label>
-                                    <select id="e2eVersion" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                    <select id="e2eVersion" class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed" disabled>
                                         <option value="v1">E2E v1</option>
                                         <option value="v2" selected>E2E v2</option>
                                     </select>
-                                </div>
+                                    <p class="text-xs text-gray-500 mt-1">当前仅支持 E2E v2 版本</p>
+                                </div> -->
                                 
                                 <div>
                                     <label for="profile" class="block text-sm font-medium text-gray-700 mb-1">保护级别 (Profile)</label>
-                                    <select id="profile" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
+                                    <select id="profile" class="w-full px-3 py-2 border border-warning rounded-md input-focus bg-warning/5 focus:border-warning focus:ring-warning">
                                         <option value="1" selected>E2E_P01</option>
                                         <option value="2">E2E_P02</option>
                                         <option value="3">E2E_P03</option>
@@ -102,7 +103,7 @@
                         
                         <!-- CRC配置 -->
                         <div>
-                            <h3 class="font-medium text-gray-800 mb-3">CRC配置</h3>
+                            <!-- <h3 class="font-medium text-gray-800 mb-3">CRC配置</h3> -->
                             
                             <div class="space-y-4">
                                 <div>
@@ -201,7 +202,7 @@
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">最终保护数据</p>
-                                        <p id="protectedData" class="text-sm font-mono bg-gray-50 p-2 rounded break-all">--</p>
+                                        <p id="finalHexData" class="text-sm font-mono bg-gray-50 p-2 rounded break-all">--</p>
                                     </div>
                                 </div>
                             </div>
@@ -246,7 +247,7 @@
     <!-- 页脚 -->
     <footer class="bg-dark text-white mt-12">
         <div class="container mx-auto px-4 py-8">
-            <div class="flex flex-col md:flex-row justify-between items-center">
+            <!-- <div class="flex flex-col md:flex-row justify-between items-center">
                 <div class="mb-4 md:mb-0">
                     <p class="text-gray-400">© 2023 AUTOSAR E2E 计算工具</p>
                     <p class="text-gray-500 text-sm mt-1">用于学习和理解AUTOSAR E2E机制</p>
@@ -256,7 +257,7 @@
                         <i class="fa fa-external-link mr-1"></i>参考技术文章
                     </a>
                 </div>
-            </div>
+            </div> -->
         </div>
     </footer>
 
@@ -450,7 +451,7 @@
             const startTime = performance.now();
             
             // 获取输入参数
-            const e2eVersion = document.getElementById('e2eVersion').value;
+            // const e2eVersion = document.getElementById('e2eVersion').value;
             const profile = parseInt(document.getElementById('profile').value);
             const dataLength = parseInt(document.getElementById('dataLength').value);
             const dataID = document.getElementById('dataID').value.trim();
@@ -507,8 +508,7 @@
             
             // 步骤1: 验证输入数据
             addProcessStep('步骤1: 验证输入数据', 
-                `E2E版本: ${e2eVersion}<br>
-                保护级别: E2E_P${profile}<br>
+                `保护级别: E2E_P${profile}<br>
                 DataID: 0x${dataID} (${parseInt(dataID, 16) || 0})<br>
                 Counter: ${counter}<br>
                 数据内容: ${dataValue ? '0x' + dataValue : '无'}<br>
@@ -560,26 +560,7 @@
                 输入Data数组: [${allDataBytes.join(', ')}]<br>
                 计算结果: ${crcValue} (0x${crcHex})`);
             
-            // 步骤4: 生成最终保护数据 (Data数组 + CRC)
-            let finalBytes = [...allDataBytes];
-            if (crcType === 'crc8') {
-                finalBytes.push(crcValue & 0xFF);
-            } else if (crcType === 'crc16') {
-                finalBytes.push((crcValue >> 8) & 0xFF);
-                finalBytes.push(crcValue & 0xFF);
-            } else {
-                finalBytes.push((crcValue >> 24) & 0xFF);
-                finalBytes.push((crcValue >> 16) & 0xFF);
-                finalBytes.push((crcValue >> 8) & 0xFF);
-                finalBytes.push(crcValue & 0xFF);
-            }
-            
-            const finalHex = bytesToHex(finalBytes);
-            addProcessStep('步骤4: 生成最终保护数据', 
-                `Data数组 + CRC 组合:<br>
-                字节数组: [${finalBytes.join(', ')}]<br>
-                十六进制表示: 0x${finalHex}`);
-            
+                
             // 步骤5: 验证结果
             let integrityCheck = '<span class="text-success">通过</span>';
             let errorDetection = '<span class="text-success">无错误</span>';
@@ -605,11 +586,12 @@
             
             // 更新结果展示
             document.getElementById('crcResult').textContent = `0x${crcHex}`;
+            document.getElementById('finalHexData').textContent = `0x${dataHexStr}`; 
             document.getElementById('counterResult').innerHTML = counterCheck;
-            document.getElementById('protectedData').textContent = `0x${finalHex}`;
             document.getElementById('integrityCheck').innerHTML = integrityCheck;
             document.getElementById('errorDetection').innerHTML = errorDetection;
             document.getElementById('calculationTime').textContent = `${timeTaken} ms`;
+
             
             // 激活结果区域
             document.getElementById('resultContainer').classList.remove('opacity-50');
