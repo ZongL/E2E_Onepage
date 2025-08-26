@@ -93,7 +93,7 @@
                                     <select id="profile" class="w-full px-3 py-2 border border-warning rounded-md input-focus bg-warning/5 focus:border-warning focus:ring-warning">
                                         <option value="1" selected>E2E_P01</option>
                                         <option value="2">E2E_P02</option>
-                                        <option value="3">E2E_P03</option>
+                                        <option value="3">E2E_P03(Todo)</option>
                                     </select>
                                 </div>
                             </div>
@@ -108,10 +108,11 @@
                                     <label for="crcPolynomial" class="block text-sm font-medium text-gray-700 mb-1">CRC多项式</label>
                                     <select id="crcPolynomial" class="w-full px-3 py-2 border border-gray-300 rounded-md input-focus">
                                         <option value="crc8" selected>CRC8 (0x1D)</option>
+                                        <option value="crc8h2f">CRC8H2F (0x2F)</option>
                                         <option value="crc16">CRC16 (0x1021)</option>
                                         <option value="crc32">CRC32 (0x04C11DB7)</option>
                                     </select>
-                                    <p class="text-xs text-gray-500 mt-1">CRC8-Init-0x00</p>
+                                    <p id="crcDescription" class="text-xs text-gray-500 mt-1">CRC8-Init-0x00</p>
                                 </div>
                             </div>
                         </div>
@@ -261,7 +262,7 @@
     </footer>
 
     <script>
-        // CRC计算函数 - 支持CRC8, CRC16, CRC32
+        // CRC计算函数 - 支持CRC8, CRC16, CRC32, CRC8H2F
         class CRC {
             static crc8(data) {
                 const polynomial = 0x1D;
@@ -280,6 +281,26 @@
                 }
                 
                 return crc;
+            }
+            
+            // CRC8H2F for E2E_P02: polynomial 0x2F, initial 0xFF, XOR 0xFF
+            static crc8h2f(data) {
+                const polynomial = 0x2F;
+                let crc = 0xFF; // 初始值为 0xFF
+                
+                for (let byte of data) {
+                    crc ^= byte;
+                    for (let i = 0; i < 8; i++) {
+                        if (crc & 0x80) {
+                            crc = (crc << 1) ^ polynomial;
+                        } else {
+                            crc <<= 1;
+                        }
+                        crc &= 0xFF;
+                    }
+                }
+                
+                return crc ^ 0xFF; // 最后异或 0xFF
             }
             
             static crc16(data) {
@@ -339,6 +360,51 @@
             return bytes.map(byte => {
                 return ('0' + (byte & 0xFF).toString(16)).slice(-2).toUpperCase();
             }).join('');
+        }
+
+        // 更新CRC描述文本
+        function updateCrcDescription() {
+            const crcType = document.getElementById('crcPolynomial').value;
+            const descElement = document.getElementById('crcDescription');
+            
+            switch (crcType) {
+                case 'crc8':
+                    descElement.textContent = "CRC8-多项式:0x1D-初始:0x00-XOR:0x00";
+                    break;
+                case 'crc8h2f':
+                    descElement.textContent = "CRC8H2F-多项式:0x2F-初始:0xFF-XOR:0xFF";
+                    break;
+                case 'crc16':
+                    descElement.textContent = "CRC16-多项式:0x1021-初始:0xFFFF";
+                    break;
+                case 'crc32':
+                    descElement.textContent = "CRC32-多项式:0x04C11DB7-初始:0xFFFFFFFF";
+                    break;
+            }
+        }
+
+        // 根据Profile自动选择CRC类型
+        function updateCrcByProfile() {
+            const profile = document.getElementById('profile').value;
+            const crcSelect = document.getElementById('crcPolynomial');
+            
+            if (profile === '2') { // E2E_P02
+                crcSelect.value = 'crc8h2f';
+                // 禁用其他选项，只允许CRC8H2F
+                Array.from(crcSelect.options).forEach(option => {
+                    option.disabled = option.value !== 'crc8h2f';
+                });
+            } else { // E2E_P01 或其他
+                // 启用所有选项
+                Array.from(crcSelect.options).forEach(option => {
+                    option.disabled = false;
+                });
+                if (profile === '1') { // E2E_P01
+                    crcSelect.value = 'crc8';
+                }
+            }
+            
+            updateCrcDescription();
         }
 
         // 自动计算数据长度
@@ -532,21 +598,29 @@
             
             // 步骤3: 计算CRC (基于完整Data数组)
             let crcValue;
+            let crcDescription;
             switch (crcType) {
                 case 'crc8':
                     crcValue = CRC.crc8(allDataBytes);
+                    crcDescription = "CRC8多项式: 0x1D, 初始值: 0x00, XOR: 0x00";
+                    break;
+                case 'crc8h2f':
+                    crcValue = CRC.crc8h2f(allDataBytes);
+                    crcDescription = "CRC8H2F多项式: 0x2F, 初始值: 0xFF, XOR: 0xFF";
                     break;
                 case 'crc16':
                     crcValue = CRC.crc16(allDataBytes);
+                    crcDescription = "CRC16多项式: 0x1021, 初始值: 0xFFFF";
                     break;
                 case 'crc32':
                     crcValue = CRC.crc32(allDataBytes);
+                    crcDescription = "CRC32多项式: 0x04C11DB7, 初始值: 0xFFFFFFFF";
                     break;
             }
             
             // 格式化CRC结果
             let crcHex;
-            if (crcType === 'crc8') {
+            if (crcType === 'crc8' || crcType === 'crc8h2f') {
                 crcHex = ('0' + crcValue.toString(16)).slice(-2).toUpperCase();
             } else if (crcType === 'crc16') {
                 crcHex = ('000' + crcValue.toString(16)).slice(-4).toUpperCase();
@@ -556,6 +630,7 @@
             
             addProcessStep('步骤3: 计算CRC', 
                 `${crcType.toUpperCase()} 多项式计算过程:<br>
+                ${crcDescription}<br>
                 输入Data数组: [${allDataBytes.join(', ')}]<br>
                 计算结果: ${crcValue} (0x${crcHex})`);
             
@@ -601,6 +676,12 @@
             // 绑定计算按钮事件
             document.getElementById('calculateBtn').addEventListener('click', calculateE2E);
             
+            // 绑定Profile选择变化事件
+            document.getElementById('profile').addEventListener('change', updateCrcByProfile);
+            
+            // 绑定CRC多项式选择变化事件
+            document.getElementById('crcPolynomial').addEventListener('change', updateCrcDescription);
+            
             // 添加输入验证和实时数据展示更新
             document.getElementById('dataValue').addEventListener('input', function(e) {
                 // 只允许十六进制字符
@@ -624,7 +705,8 @@
                 updateDataLayoutDisplay();
             });
             
-            // 页面加载时初始化数据展示
+            // 页面加载时初始化
+            updateCrcByProfile(); // 初始化CRC选择
             updateDataLayoutDisplay();
         });
     </script>
